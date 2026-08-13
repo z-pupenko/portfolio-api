@@ -1,0 +1,4 @@
+asset_id,transaction_type,quantity,price,fees,transaction_date
+1,buy,10,150.25,1.50,2026-08-01
+2,buy,5,400.00,0,2026-08-02
+1,sell,3,160.00,1.00,2026-08-05

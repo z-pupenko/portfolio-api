@@ -1,0 +1,184 @@
+# Portfolio API
+
+A REST-style portfolio management API built with FastAPI, SQLAlchemy, and
+PostgreSQL. It tracks portfolios, assets, prices, and buy/sell transactions,
+then calculates cash balances, holdings, and portfolio valuations.
+
+The project also supports atomic CSV transaction imports. Pandas normalizes
+and summarizes uploaded data, Pydantic validates each row, and SQLAlchemy saves
+the full batch in one database transaction.
+
+## Features
+
+- Create, retrieve, update, and delete portfolios
+- Create and list assets
+- Record asset prices and retrieve the latest price
+- Create, retrieve, update, delete, and list transactions
+- Reject purchases with insufficient cash
+- Reject sales that exceed the quantity currently held
+- Calculate portfolio cash balance and holdings
+- Calculate portfolio value from the latest asset prices
+- Import transactions from CSV with row-level validation errors
+- Roll back the entire CSV batch when any transaction fails
+- Return per-asset CSV import summaries using Pandas
+- Manage database schema changes with Alembic
+- Validate application configuration at startup
+
+## Technology
+
+- Python 3.14
+- FastAPI
+- Pydantic and pydantic-settings
+- SQLAlchemy 2
+- PostgreSQL with psycopg
+- Alembic
+- Pandas
+- Pytest
+- Ruff
+
+## Project structure
+
+```text
+app/
+├── routers/                 # HTTP endpoints and HTTP error translation
+│   ├── assets.py
+│   ├── portfolios.py
+│   ├── transactions.py
+│   └── lookups.py
+├── services/                # Business rules and calculations
+│   ├── portfolios.py
+│   ├── transactions.py
+│   └── transaction_imports.py
+├── config.py                # Environment-backed application settings
+├── database.py              # SQLAlchemy engine and session dependency
+├── main.py                  # FastAPI application and router registration
+├── models.py                # SQLAlchemy database models
+└── schemas.py               # Pydantic request and response schemas
+
+alembic/                     # Database migrations
+tests/                       # Unit, integration, and API tests
+```
+
+## Local setup
+
+### 1. Create and activate a virtual environment
+
+PowerShell:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+### 2. Install development dependencies
+
+```powershell
+python -m pip install -r requirements-dev.txt
+```
+
+### 3. Configure PostgreSQL
+
+Copy the environment template:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Update `.env` with credentials for an existing PostgreSQL database:
+
+```dotenv
+APP_NAME=Portfolio API
+APP_ENVIRONMENT=development
+DEBUG=false
+
+DB_USER=portfolio_user
+DB_PASSWORD=change-me
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=portfolio_db
+```
+
+The application validates these settings during startup. The real `.env` file
+is excluded from Git.
+
+### 4. Apply database migrations
+
+```powershell
+python -m alembic upgrade head
+```
+
+### 5. Start the API
+
+```powershell
+python -m uvicorn app.main:app --reload
+```
+
+Open the interactive API documentation at:
+
+- Swagger UI: <http://127.0.0.1:8000/docs>
+- ReDoc: <http://127.0.0.1:8000/redoc>
+
+## CSV transaction import
+
+Send a `multipart/form-data` request containing a `.csv` file to:
+
+```text
+POST /portfolios/{portfolio_id}/transactions/import/
+```
+
+Required columns:
+
+```text
+asset_id,transaction_type,quantity,price,transaction_date
+```
+
+Optional columns:
+
+```text
+fees
+```
+
+Example:
+
+```csv
+asset_id,transaction_type,quantity,price,fees,transaction_date
+1,buy,10,150.25,1.50,2026-08-01
+2,buy,5,400.00,0,2026-08-02
+1,sell,3,160.00,1.00,2026-08-05
+```
+
+Imports are limited to 5 MiB. Every row is validated before persistence, and
+the database batch is atomic: either all transactions are saved or none are.
+
+## Quality checks
+
+Run the test suite:
+
+```powershell
+python -m pytest
+```
+
+Run lint checks:
+
+```powershell
+python -m ruff check app tests alembic
+```
+
+Check formatting:
+
+```powershell
+python -m ruff format --check app tests alembic
+```
+
+The current suite contains unit, integration, and API tests covering business
+calculations, Pydantic schemas, configuration, persistence, and CSV imports.
+
+## Current limitations
+
+- The API does not yet implement authentication or per-user ownership.
+- Valuation currently requires asset currency to match portfolio base currency;
+  foreign-exchange conversion is not implemented.
+- Large imports run synchronously and are intentionally limited to 5 MiB.
+
+These are planned areas for future development rather than hidden production
+claims.
