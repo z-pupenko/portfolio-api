@@ -1,5 +1,7 @@
 # Portfolio API
 
+[![CI](https://github.com/z-pupenko/portfolio-api/actions/workflows/ci.yml/badge.svg)](https://github.com/z-pupenko/portfolio-api/actions/workflows/ci.yml)
+
 A REST-style portfolio management API built with FastAPI, SQLAlchemy, and
 PostgreSQL. It tracks portfolios, assets, prices, and buy/sell transactions,
 then calculates cash balances, holdings, and portfolio valuations.

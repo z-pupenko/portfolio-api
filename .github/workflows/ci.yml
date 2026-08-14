@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      DB_USER: ci_user
+      DB_PASSWORD: ci_password
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_NAME: ci_database
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Check formatting
+        run: python -m ruff format --check app tests alembic
+
+      - name: Run lint checks
+        run: python -m ruff check app tests alembic
+
+      - name: Run tests
+        run: python -m pytest
