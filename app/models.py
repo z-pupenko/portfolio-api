@@ -6,6 +6,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Index,
     Numeric,
     String,
     Text,
@@ -22,6 +23,12 @@ from app.database import Base
 
 class Portfolio(Base):
     __tablename__ = "portfolios"
+    __table_args__ = (
+        CheckConstraint(
+            "starting_cash >= 0",
+            name="ck_portfolios_starting_cash_non_negative",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
@@ -103,6 +110,12 @@ class Asset(Base):
 
 class AssetPrice(Base):
     __tablename__ = "asset_prices"
+    __table_args__ = (
+        CheckConstraint(
+            "price > 0",
+            name="ck_asset_prices_price_positive",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(
         primary_key=True,
@@ -141,6 +154,18 @@ class Transaction(Base):
         CheckConstraint(
             "transaction_type IN ('buy', 'sell')",
             name="ck_transactions_transaction_type",
+        ),
+        CheckConstraint(
+            "quantity > 0",
+            name="ck_transactions_quantity_positive",
+        ),
+        CheckConstraint(
+            "price > 0",
+            name="ck_transactions_price_positive",
+        ),
+        CheckConstraint(
+            "fees >= 0",
+            name="ck_transactions_fees_non_negative",
         ),
     )
 
@@ -189,3 +214,21 @@ class Transaction(Base):
     asset: Mapped[Asset] = relationship(
         back_populates="transactions",
     )
+
+
+Index(
+    "ix_transactions_portfolio_id_id",
+    Transaction.portfolio_id,
+    Transaction.id,
+)
+Index(
+    "ix_transactions_portfolio_id_asset_id",
+    Transaction.portfolio_id,
+    Transaction.asset_id,
+)
+Index(
+    "ix_asset_prices_asset_id_priced_at_id",
+    AssetPrice.asset_id,
+    AssetPrice.priced_at.desc(),
+    AssetPrice.id.desc(),
+)
