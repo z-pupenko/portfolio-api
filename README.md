@@ -174,6 +174,9 @@ python -m ruff format --check app tests alembic
 
 The current suite contains unit, integration, and API tests covering business
 calculations, Pydantic schemas, configuration, persistence, and CSV imports.
+CI also starts a disposable PostgreSQL service, applies the complete Alembic
+migration history, checks for model/schema drift, and verifies database
+constraints independently of Pydantic.
 
 ## Current limitations
 
