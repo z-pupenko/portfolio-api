@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 def test_create_portfolio_through_api(
     client: TestClient,
+    auth_headers: dict[str, str],
 ):
     payload = {
         "name": "Growth",
@@ -16,6 +17,7 @@ def test_create_portfolio_through_api(
     response = client.post(
         "/portfolios/",
         json=payload,
+        headers=auth_headers,
     )
 
     assert response.status_code == 201
@@ -31,6 +33,7 @@ def test_create_portfolio_through_api(
 
     get_response = client.get(
         f"/portfolios/{portfolio_id}",
+        headers=auth_headers,
     )
 
     assert get_response.status_code == 200

@@ -12,7 +12,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Transaction
+from app.dependencies import get_current_user
+from app.models import Transaction, User
 from app.routers.lookups import (
     get_asset_or_404,
     get_portfolio_or_404,
@@ -81,10 +82,12 @@ def import_transactions_csv(
     portfolio_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> TransactionImportResponse:
     portfolio = get_portfolio_or_404(
         db,
         portfolio_id,
+        current_user.id,
     )
 
     validate_transaction_csv_upload(file)
@@ -138,10 +141,12 @@ def create_transaction(
     portfolio_id: int,
     transaction_data: TransactionCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Transaction:
     portfolio = get_portfolio_or_404(
         db,
         portfolio_id,
+        current_user.id,
     )
 
     get_asset_or_404(
@@ -174,10 +179,12 @@ def create_transaction(
 def get_transaction(
     transaction_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Transaction:
     return get_transaction_or_404(
         db,
         transaction_id,
+        current_user.id,
     )
 
 
@@ -188,10 +195,12 @@ def get_transaction(
 def delete_transaction(
     transaction_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> None:
     transaction = get_transaction_or_404(
         db,
         transaction_id,
+        current_user.id,
     )
 
     db.delete(transaction)
@@ -206,10 +215,12 @@ def update_transaction(
     transaction_id: int,
     transaction_data: TransactionUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Transaction:
     transaction = get_transaction_or_404(
         db,
         transaction_id,
+        current_user.id,
     )
 
     update_data = transaction_data.model_dump(exclude_unset=True)
@@ -247,6 +258,7 @@ def update_transaction(
     portfolio = get_portfolio_or_404(
         db,
         transaction.portfolio_id,
+        current_user.id,
     )
 
     try:
@@ -296,10 +308,12 @@ def update_transaction(
 def get_portfolio_transactions(
     portfolio_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> list[Transaction]:
     get_portfolio_or_404(
         db,
         portfolio_id,
+        current_user.id,
     )
 
     statement = (

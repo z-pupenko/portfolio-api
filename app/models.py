@@ -32,6 +32,11 @@ class Portfolio(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=False,
+    )
+
     name: Mapped[str] = mapped_column(
         String(100),
         nullable=False,
@@ -62,6 +67,10 @@ class Portfolio(Base):
     transactions: Mapped[list[Transaction]] = relationship(
         back_populates="portfolio",
         cascade="all, delete-orphan",
+    )
+
+    user: Mapped[User] = relationship(
+        back_populates="portfolios",
     )
 
 
@@ -232,3 +241,46 @@ Index(
     AssetPrice.priced_at.desc(),
     AssetPrice.id.desc(),
 )
+Index(
+    "ix_portfolios_user_id_id",
+    Portfolio.user_id,
+    Portfolio.id,
+)
+
+
+# --------------------------------------------------
+# User models
+# --------------------------------------------------
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    email: Mapped[str] = mapped_column(
+        String(320),
+        nullable=False,
+        unique=True,
+    )
+
+    password_hash: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+
+    full_name: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    portfolios: Mapped[list[Portfolio]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )

@@ -3,7 +3,10 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 
 
-def test_import_transactions_csv(client: TestClient):
+def test_import_transactions_csv(
+    client: TestClient,
+    auth_headers: dict[str, str],
+):
     portfolio_response = client.post(
         "/portfolios/",
         json={
@@ -11,12 +14,14 @@ def test_import_transactions_csv(client: TestClient):
             "starting_cash": "10000",
             "base_currency": "GBP",
         },
+        headers=auth_headers,
     )
     assert portfolio_response.status_code == 201
     portfolio_id = portfolio_response.json()["id"]
 
     aapl_response = client.post(
         "/assets/",
+        headers=auth_headers,
         json={
             "symbol": "AAPL",
             "name": "Apple",
@@ -28,6 +33,7 @@ def test_import_transactions_csv(client: TestClient):
 
     msft_response = client.post(
         "/assets/",
+        headers=auth_headers,
         json={
             "symbol": "MSFT",
             "name": "Microsoft",
@@ -56,6 +62,7 @@ def test_import_transactions_csv(client: TestClient):
                 "text/csv",
             )
         },
+        headers=auth_headers,
     )
     assert response.status_code == 201
 
@@ -71,6 +78,9 @@ def test_import_transactions_csv(client: TestClient):
     assert len(response_data["transactions"]) == 3
     assert response_data["transactions"][0]["asset_id"] == aapl_id
 
-    stored_response = client.get(f"/portfolios/{portfolio_id}/transactions/")
+    stored_response = client.get(
+        f"/portfolios/{portfolio_id}/transactions/",
+        headers=auth_headers,
+    )
     assert stored_response.status_code == 200
     assert len(stored_response.json()) == 3

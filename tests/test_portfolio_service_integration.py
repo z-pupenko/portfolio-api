@@ -3,20 +3,27 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
-from app.models import Asset, Portfolio, Transaction
+from app.models import Asset, Portfolio, Transaction, User
 from app.services.portfolios import calculate_holdings
 
 
 def test_holdings_query_filters_by_portfolio(
     db_session: Session,
 ):
+    user = User(
+        email="integration@example.com",
+        password_hash="test-hash",
+    )
+
     growth = Portfolio(
+        user=user,
         name="Growth",
         starting_cash=Decimal("10000"),
         base_currency="GBP",
     )
 
     retirement = Portfolio(
+        user=user,
         name="Retirement",
         starting_cash=Decimal("20000"),
         base_currency="GBP",
@@ -34,6 +41,7 @@ def test_holdings_query_filters_by_portfolio(
             growth,
             retirement,
             aapl,
+            user,
         ]
     )
     db_session.flush()

@@ -10,6 +10,10 @@ The project also supports atomic CSV transaction imports. Pandas normalizes
 and summarizes uploaded data, Pydantic validates each row, and SQLAlchemy saves
 the full batch in one database transaction.
 
+Users register with email and password, authenticate through an OAuth2 password
+flow, and receive short-lived signed JWT access tokens. Portfolio and transaction
+operations are scoped to the authenticated owner.
+
 ## Features
 
 - Create, retrieve, update, and delete portfolios
@@ -25,6 +29,9 @@ the full batch in one database transaction.
 - Return per-asset CSV import summaries using Pandas
 - Manage database schema changes with Alembic
 - Validate application configuration at startup
+- Register users with Argon2 password hashing
+- Authenticate with OAuth2 bearer tokens and signed JWTs
+- Restrict portfolios, transactions, imports, and calculations to their owner
 
 ## Technology
 
@@ -44,17 +51,21 @@ the full batch in one database transaction.
 app/
 ├── routers/                 # HTTP endpoints and HTTP error translation
 │   ├── assets.py
+│   ├── auth.py
 │   ├── portfolios.py
 │   ├── transactions.py
 │   └── lookups.py
 ├── services/                # Business rules and calculations
 │   ├── portfolios.py
 │   ├── transactions.py
-│   └── transaction_imports.py
+│   ├── transaction_imports.py
+│   └── users.py
 ├── config.py                # Environment-backed application settings
 ├── database.py              # SQLAlchemy engine and session dependency
+├── dependencies.py          # Current-user authentication dependency
 ├── main.py                  # FastAPI application and router registration
 ├── models.py                # SQLAlchemy database models
+├── security.py              # Password hashing and JWT helpers
 └── schemas.py               # Pydantic request and response schemas
 
 alembic/                     # Database migrations
@@ -98,6 +109,10 @@ DB_PASSWORD=change-me
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=portfolio_db
+
+JWT_SECRET_KEY=replace-with-a-random-secret
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
 The application validates these settings during startup. The real `.env` file
@@ -119,6 +134,23 @@ Open the interactive API documentation at:
 
 - Swagger UI: <http://127.0.0.1:8000/docs>
 - ReDoc: <http://127.0.0.1:8000/redoc>
+
+## Authentication
+
+Register a user with `POST /auth/register`, then request an access token from
+`POST /auth/token`. The token endpoint uses form fields named `username` and
+`password`; submit the user's email in the `username` field.
+
+Send the returned token with protected requests:
+
+```http
+Authorization: Bearer <access-token>
+```
+
+Portfolio routes return only the authenticated user's portfolios. Requests for
+another user's portfolio or transaction return `404` so private resource IDs
+are not disclosed. Assets and asset prices remain a shared catalogue for all
+authenticated users.
 
 ## CSV transaction import
 
@@ -180,10 +212,11 @@ constraints independently of Pydantic.
 
 ## Current limitations
 
-- The API does not yet implement authentication or per-user ownership.
 - Valuation currently requires asset currency to match portfolio base currency;
   foreign-exchange conversion is not implemented.
 - Large imports run synchronously and are intentionally limited to 5 MiB.
+- Access tokens are short-lived but do not yet support refresh tokens or a
+  server-side revocation list.
 
 These are planned areas for future development rather than hidden production
 claims.

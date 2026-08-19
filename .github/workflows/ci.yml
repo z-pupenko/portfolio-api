@@ -21,6 +21,7 @@ jobs:
       DB_HOST: localhost
       DB_PORT: "5432"
       DB_NAME: ci_database
+      JWT_SECRET_KEY: ci-only-secret-not-used-outside-tests
 
     steps:
       - name: Check out repository
@@ -75,6 +76,7 @@ jobs:
       DB_HOST: localhost
       DB_PORT: "5432"
       DB_NAME: ci_database
+      JWT_SECRET_KEY: ci-only-secret-not-used-outside-tests
       RUN_POSTGRES_TESTS: "1"
 
     steps:
@@ -97,6 +99,11 @@ jobs:
 
       - name: Apply migrations to PostgreSQL
         run: python -m alembic upgrade head
+
+      - name: Test latest migration downgrade and upgrade
+        run: |
+          python -m alembic downgrade -1
+          python -m alembic upgrade head
 
       - name: Check models and migrations agree
         run: python -m alembic check

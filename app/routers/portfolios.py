@@ -8,7 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Portfolio
+from app.dependencies import get_current_user
+from app.models import Portfolio, User
 from app.routers.lookups import get_portfolio_or_404
 from app.schemas import (
     HoldingResponse,
@@ -41,12 +42,16 @@ router = APIRouter(
 def create_portfolio(
     portfolio_data: PortfolioCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Portfolio:
     portfolio_values = portfolio_data.model_dump()
 
     portfolio_values["base_currency"] = portfolio_values["base_currency"].upper()
 
-    portfolio = Portfolio(**portfolio_values)
+    portfolio = Portfolio(
+        user_id=current_user.id,
+        **portfolio_values,
+    )
 
     db.add(portfolio)
     db.commit()
@@ -62,8 +67,13 @@ def create_portfolio(
 def get_portfolios(
     name: str | None = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> list[Portfolio]:
-    statement = select(Portfolio)
+    statement = (
+        select(Portfolio)
+        .where(Portfolio.user_id == current_user.id)
+        .order_by(Portfolio.id)
+    )
 
     if name is not None:
         statement = statement.where(Portfolio.name == name)
@@ -80,10 +90,12 @@ def get_portfolios(
 def get_portfolio(
     portfolio_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Portfolio:
     return get_portfolio_or_404(
         db,
         portfolio_id,
+        current_user.id,
     )
 
 
@@ -95,10 +107,12 @@ def update_portfolio(
     portfolio_id: int,
     portfolio_data: PortfolioUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Portfolio:
     portfolio = get_portfolio_or_404(
         db,
         portfolio_id,
+        current_user.id,
     )
 
     update_data = portfolio_data.model_dump(exclude_unset=True)
@@ -130,10 +144,12 @@ def update_portfolio(
 def delete_portfolio(
     portfolio_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> None:
     portfolio = get_portfolio_or_404(
         db,
         portfolio_id,
+        current_user.id,
     )
 
     db.delete(portfolio)
@@ -152,10 +168,12 @@ def delete_portfolio(
 def get_portfolio_holdings(
     portfolio_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> list[HoldingResponse]:
     get_portfolio_or_404(
         db,
         portfolio_id,
+        current_user.id,
     )
 
     holdings = calculate_holdings(db, portfolio_id)
@@ -170,10 +188,12 @@ def get_portfolio_holdings(
 def get_portfolio_summary(
     portfolio_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> PortfolioSummaryResponse:
     portfolio = get_portfolio_or_404(
         db,
         portfolio_id,
+        current_user.id,
     )
 
     cash_balance = calculate_cash_balance(
@@ -202,10 +222,12 @@ def get_portfolio_summary(
 def get_portfolio_valuation(
     portfolio_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> PortfolioValuationResponse:
     portfolio = get_portfolio_or_404(
         db,
         portfolio_id,
+        current_user.id,
     )
 
     try:

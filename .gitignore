@@ -25,10 +25,3 @@ tools/
 
 # One-off learning script
 tests/fixtures/Pandas_test.py
-
-# Local non-project artifacts
-output/
-tools/
-
-# One-off learning script
-tests/fixtures/Pandas_test.py

@@ -2,7 +2,36 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+# --------------------------------------------------
+# User schemas
+# --------------------------------------------------
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: Literal["bearer"] = "bearer"
+
+
+class UserCreate(BaseModel):
+    email: EmailStr = Field(max_length=320)
+    password: str = Field(min_length=8, max_length=128)
+    full_name: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=100,
+    )
+
+
+class UserResponse(BaseModel):
+    id: int
+    email: EmailStr
+    full_name: str | None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 # --------------------------------------------------
 # Portfolio schemas

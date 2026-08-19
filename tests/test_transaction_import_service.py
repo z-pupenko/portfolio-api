@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import select
 
-from app.models import Asset, Portfolio, Transaction
+from app.models import Asset, Portfolio, Transaction, User
 from app.schemas import TransactionCreate
 from app.services.transaction_imports import (
     TransactionCSVFormatError,
@@ -82,7 +82,13 @@ def test_parse_csv_collects_row_validation_errors():
 def test_import_batch_rolls_back_when_later_row_fails(
     db_session,
 ):
+    user = User(
+        email="import@example.com",
+        password_hash="test-hash",
+    )
+
     portfolio = Portfolio(
+        user=user,
         name="Growth",
         starting_cash=Decimal("1000"),
         base_currency="GBP",
@@ -99,6 +105,7 @@ def test_import_batch_rolls_back_when_later_row_fails(
         [
             portfolio,
             asset,
+            user,
         ]
     )
     db_session.commit()

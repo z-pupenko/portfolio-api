@@ -18,17 +18,38 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture
 def postgres_portfolio_and_asset():
     symbol = f"PG{uuid4().hex[:10]}".upper()
+    email = f"pg-{uuid4().hex}@example.com"
 
     with engine.begin() as connection:
-        portfolio_id = connection.execute(
+        user_id = connection.execute(
             text(
                 """
-                INSERT INTO portfolios (name, starting_cash, base_currency)
-                VALUES (:name, :starting_cash, :base_currency)
+                INSERT INTO users (email, password_hash, full_name)
+                VALUES (:email, :password_hash, :full_name)
                 RETURNING id
                 """
             ),
             {
+                "email": email,
+                "password_hash": "test-hash",
+                "full_name": "PostgreSQL Test User",
+            },
+        ).scalar_one()
+        portfolio_id = connection.execute(
+            text(
+                """
+                INSERT INTO portfolios (
+                    user_id,
+                    name,
+                    starting_cash,
+                    base_currency
+                )
+                VALUES (:user_id, :name, :starting_cash, :base_currency)
+                RETURNING id
+                """
+            ),
+            {
+                "user_id": user_id,
                 "name": "PostgreSQL constraint test",
                 "starting_cash": Decimal("1000"),
                 "base_currency": "GBP",
@@ -50,7 +71,7 @@ def postgres_portfolio_and_asset():
             },
         ).scalar_one()
 
-    yield portfolio_id, asset_id
+    yield user_id, portfolio_id, asset_id
 
     with engine.begin() as connection:
         connection.execute(
@@ -69,6 +90,10 @@ def postgres_portfolio_and_asset():
             text("DELETE FROM portfolios WHERE id = :portfolio_id"),
             {"portfolio_id": portfolio_id},
         )
+        connection.execute(
+            text("DELETE FROM users WHERE id = :user_id"),
+            {"user_id": user_id},
+        )
 
 
 def test_migrations_create_expected_schema_objects():
@@ -81,7 +106,21 @@ def test_migrations_create_expected_schema_objects():
         "assets",
         "portfolios",
         "transactions",
+        "users",
     } <= table_names
+
+    portfolio_columns = {
+        column["name"]: column for column in inspector.get_columns("portfolios")
+    }
+    assert portfolio_columns["user_id"]["nullable"] is False
+
+    portfolio_foreign_keys = inspector.get_foreign_keys("portfolios")
+    assert any(
+        foreign_key["constrained_columns"] == ["user_id"]
+        and foreign_key["referred_table"] == "users"
+        and foreign_key["referred_columns"] == ["id"]
+        for foreign_key in portfolio_foreign_keys
+    )
 
     portfolio_checks = {
         constraint["name"]
@@ -108,6 +147,7 @@ def test_migrations_create_expected_schema_objects():
     transaction_indexes = {
         index["name"] for index in inspector.get_indexes("transactions")
     }
+    portfolio_indexes = {index["name"] for index in inspector.get_indexes("portfolios")}
     asset_price_indexes = {
         index["name"] for index in inspector.get_indexes("asset_prices")
     }
@@ -116,6 +156,7 @@ def test_migrations_create_expected_schema_objects():
         "ix_transactions_portfolio_id_asset_id",
         "ix_transactions_portfolio_id_id",
     } <= transaction_indexes
+    assert "ix_portfolios_user_id_id" in portfolio_indexes
     assert "ix_asset_prices_asset_id_priced_at_id" in asset_price_indexes
 
 
@@ -141,7 +182,7 @@ def test_postgres_rejects_invalid_transaction_values(
     price,
     fees,
 ):
-    portfolio_id, asset_id = postgres_portfolio_and_asset
+    _, portfolio_id, asset_id = postgres_portfolio_and_asset
 
     with pytest.raises(IntegrityError):
         with engine.begin() as connection:
@@ -180,17 +221,27 @@ def test_postgres_rejects_invalid_transaction_values(
             )
 
 
-def test_postgres_rejects_negative_starting_cash():
+def test_postgres_rejects_negative_starting_cash(
+    postgres_portfolio_and_asset,
+):
+    user_id, _, _ = postgres_portfolio_and_asset
+
     with pytest.raises(IntegrityError):
         with engine.begin() as connection:
             connection.execute(
                 text(
                     """
-                    INSERT INTO portfolios (name, starting_cash, base_currency)
-                    VALUES (:name, :starting_cash, :base_currency)
+                    INSERT INTO portfolios (
+                        user_id,
+                        name,
+                        starting_cash,
+                        base_currency
+                    )
+                    VALUES (:user_id, :name, :starting_cash, :base_currency)
                     """
                 ),
                 {
+                    "user_id": user_id,
                     "name": "Invalid cash test",
                     "starting_cash": Decimal("-1"),
                     "base_currency": "GBP",
@@ -201,7 +252,7 @@ def test_postgres_rejects_negative_starting_cash():
 def test_postgres_rejects_non_positive_asset_price(
     postgres_portfolio_and_asset,
 ):
-    _, asset_id = postgres_portfolio_and_asset
+    _, _, asset_id = postgres_portfolio_and_asset
 
     with pytest.raises(IntegrityError):
         with engine.begin() as connection:
@@ -215,5 +266,29 @@ def test_postgres_rejects_non_positive_asset_price(
                 {
                     "asset_id": asset_id,
                     "price": Decimal("0"),
+                },
+            )
+
+
+def test_postgres_rejects_portfolio_with_unknown_owner():
+    with pytest.raises(IntegrityError):
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO portfolios (
+                        user_id,
+                        name,
+                        starting_cash,
+                        base_currency
+                    )
+                    VALUES (:user_id, :name, :starting_cash, :base_currency)
+                    """
+                ),
+                {
+                    "user_id": 2_147_483_647,
+                    "name": "Unknown owner",
+                    "starting_cash": Decimal("1000"),
+                    "base_currency": "GBP",
                 },
             )

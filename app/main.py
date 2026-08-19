@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from app.config import settings
-from app.routers import assets, portfolios, transactions
+from app.routers import assets, auth, portfolios, transactions
 
 app = FastAPI(
     title=settings.app_name,
@@ -13,6 +13,8 @@ app = FastAPI(
 # API routers
 # --------------------------------------------------
 
+
+app.include_router(auth.router)
 app.include_router(portfolios.router)
 app.include_router(assets.router)
 app.include_router(transactions.router)

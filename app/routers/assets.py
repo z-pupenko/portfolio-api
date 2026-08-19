@@ -8,7 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Asset, AssetPrice
+from app.dependencies import get_current_user
+from app.models import Asset, AssetPrice, User
 from app.routers.lookups import get_asset_or_404
 from app.schemas import (
     AssetCreate,
@@ -34,6 +35,7 @@ router = APIRouter(
 def create_asset(
     asset_data: AssetCreate,
     db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
 ) -> Asset:
     symbol = asset_data.symbol.strip().upper()
 
@@ -65,6 +67,7 @@ def create_asset(
 )
 def get_assets(
     db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
 ) -> list[Asset]:
     statement = select(Asset).order_by(Asset.symbol)
 
@@ -85,6 +88,7 @@ def create_asset_price(
     asset_id: int,
     price_data: AssetPriceCreate,
     db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
 ) -> AssetPrice:
     get_asset_or_404(
         db,
@@ -110,6 +114,7 @@ def create_asset_price(
 def get_latest_asset_price(
     asset_id: int,
     db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
 ) -> AssetPrice:
     get_asset_or_404(
         db,

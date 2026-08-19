@@ -57,3 +57,30 @@ def client():
     app.dependency_overrides.clear()
     Base.metadata.drop_all(engine)
     engine.dispose()
+
+
+@pytest.fixture
+def auth_headers(client: TestClient) -> dict[str, str]:
+    credentials = {
+        "email": "api-user@example.com",
+        "password": "secure-password",
+        "full_name": "API User",
+    }
+
+    registration_response = client.post(
+        "/auth/register",
+        json=credentials,
+    )
+    assert registration_response.status_code == 201
+
+    token_response = client.post(
+        "/auth/token",
+        data={
+            "username": credentials["email"],
+            "password": credentials["password"],
+        },
+    )
+    assert token_response.status_code == 200
+
+    access_token = token_response.json()["access_token"]
+    return {"Authorization": f"Bearer {access_token}"}
