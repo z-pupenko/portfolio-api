@@ -236,6 +236,11 @@ Index(
     Transaction.asset_id,
 )
 Index(
+    "ix_transactions_portfolio_id_transaction_date",
+    Transaction.portfolio_id,
+    Transaction.transaction_date,
+)
+Index(
     "ix_asset_prices_asset_id_priced_at_id",
     AssetPrice.asset_id,
     AssetPrice.priced_at.desc(),

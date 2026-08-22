@@ -155,6 +155,7 @@ def test_migrations_create_expected_schema_objects():
     assert {
         "ix_transactions_portfolio_id_asset_id",
         "ix_transactions_portfolio_id_id",
+        "ix_transactions_portfolio_id_transaction_date",
     } <= transaction_indexes
     assert "ix_portfolios_user_id_id" in portfolio_indexes
     assert "ix_asset_prices_asset_id_priced_at_id" in asset_price_indexes

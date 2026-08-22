@@ -24,6 +24,7 @@ operations are scoped to the authenticated owner.
 - Reject sales that exceed the quantity currently held
 - Calculate portfolio cash balance and holdings
 - Calculate portfolio value from the latest asset prices
+- Summarize transaction activity by asset and currency over an optional date range
 - Import transactions from CSV with row-level validation errors
 - Roll back the entire CSV batch when any transaction fails
 - Return per-asset CSV import summaries using Pandas
@@ -59,6 +60,7 @@ app/
 │   ├── portfolios.py
 │   ├── transactions.py
 │   ├── transaction_imports.py
+│   ├── analytics.py
 │   └── users.py
 ├── config.py                # Environment-backed application settings
 ├── database.py              # SQLAlchemy engine and session dependency
@@ -152,6 +154,26 @@ another user's portfolio or transaction return `404` so private resource IDs
 are not disclosed. Assets and asset prices remain a shared catalogue for all
 authenticated users.
 
+## Transaction summary
+
+Retrieve an authenticated portfolio's transaction activity with:
+
+```text
+GET /portfolios/{portfolio_id}/transaction-summary
+```
+
+Optional `start_date` and `end_date` query parameters use ISO dates and are
+inclusive. PostgreSQL filters and joins the relevant rows before Pandas builds
+two report breakdowns: per asset and per currency. Currency totals remain
+separate so values denominated in GBP, USD, or another currency are never added
+together without foreign-exchange conversion.
+
+Example:
+
+```text
+GET /portfolios/1/transaction-summary?start_date=2026-01-01&end_date=2026-06-30
+```
+
 ## CSV transaction import
 
 Send a `multipart/form-data` request containing a `.csv` file to:
@@ -214,6 +236,8 @@ constraints independently of Pydantic.
 
 - Valuation currently requires asset currency to match portfolio base currency;
   foreign-exchange conversion is not implemented.
+- Transaction summaries report monetary totals in each asset's native currency;
+  they do not convert those totals into the portfolio base currency.
 - Large imports run synchronously and are intentionally limited to 5 MiB.
 - Access tokens are short-lived but do not yet support refresh tokens or a
   server-side revocation list.

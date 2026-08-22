@@ -1,7 +1,10 @@
+from typing import Annotated
+
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Query,
     status,
 )
 from sqlalchemy import select
@@ -18,6 +21,12 @@ from app.schemas import (
     PortfolioSummaryResponse,
     PortfolioUpdate,
     PortfolioValuationResponse,
+    TransactionAnalyticsFilters,
+    TransactionAnalyticsResponse,
+)
+from app.services.analytics import (
+    build_transaction_analytics,
+    fetch_transaction_analytics_rows,
 )
 from app.services.portfolios import (
     calculate_cash_balance,
@@ -238,3 +247,37 @@ def get_portfolio_valuation(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(error),
         ) from error
+
+
+@router.get(
+    "/{portfolio_id}/transaction-summary",
+    response_model=TransactionAnalyticsResponse,
+)
+def get_portfolio_transaction_summary(
+    portfolio_id: int,
+    filters: Annotated[
+        TransactionAnalyticsFilters,
+        Query(),
+    ],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> TransactionAnalyticsResponse:
+    get_portfolio_or_404(
+        db,
+        portfolio_id,
+        current_user.id,
+    )
+
+    rows = fetch_transaction_analytics_rows(
+        db,
+        portfolio_id,
+        filters,
+    )
+
+    report = build_transaction_analytics(
+        rows,
+        portfolio_id,
+        filters,
+    )
+
+    return report

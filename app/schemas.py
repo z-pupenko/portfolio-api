@@ -2,7 +2,14 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 # --------------------------------------------------
 # User schemas
@@ -111,6 +118,54 @@ class AssetResponse(AssetCreate):
 # --------------------------------------------------
 # Transaction schemas
 # --------------------------------------------------
+
+
+class TransactionAnalyticsAssetResponse(BaseModel):
+    asset_id: int
+    symbol: str
+    currency: str
+    transaction_count: int
+    total_bought: Decimal
+    total_sold: Decimal
+    net_quantity: Decimal
+    gross_traded_value: Decimal
+    total_fees: Decimal
+
+
+class TransactionAnalyticsCurrencyResponse(BaseModel):
+    currency: str
+    transaction_count: int
+    gross_traded_value: Decimal
+    total_fees: Decimal
+
+
+class TransactionAnalyticsBreakdownResponse(BaseModel):
+    by_asset: list[TransactionAnalyticsAssetResponse]
+    by_currency: list[TransactionAnalyticsCurrencyResponse]
+
+
+class TransactionAnalyticsResponse(BaseModel):
+    portfolio_id: int
+    start_date: date | None
+    end_date: date | None
+    transaction_count: int
+    breakdown: TransactionAnalyticsBreakdownResponse
+
+
+class TransactionAnalyticsFilters(BaseModel):
+    start_date: date | None = None
+    end_date: date | None = None
+
+    @model_validator(mode="after")
+    def validate_date_range(self):
+        if (
+            self.start_date is not None
+            and self.end_date is not None
+            and self.start_date > self.end_date
+        ):
+            raise ValueError("start_date must be on or before end_date")
+
+        return self
 
 
 class TransactionCreate(BaseModel):
