@@ -36,8 +36,10 @@ from app.services.transaction_imports import (
 from app.services.transactions import (
     TransactionRuleError,
     add_transaction,
+    lock_portfolio_for_transaction_write,
     validate_sufficient_cash,
     validate_sufficient_quantity,
+    validate_transaction_deletion,
 )
 
 router = APIRouter(
@@ -202,6 +204,29 @@ def delete_transaction(
         transaction_id,
         current_user.id,
     )
+    lock_portfolio_for_transaction_write(
+        db,
+        transaction.portfolio_id,
+    )
+    db.refresh(transaction)
+
+    portfolio = get_portfolio_or_404(
+        db,
+        transaction.portfolio_id,
+        current_user.id,
+    )
+
+    try:
+        validate_transaction_deletion(
+            db,
+            portfolio,
+            transaction,
+        )
+    except TransactionRuleError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
 
     db.delete(transaction)
     db.commit()
@@ -222,6 +247,11 @@ def update_transaction(
         transaction_id,
         current_user.id,
     )
+    lock_portfolio_for_transaction_write(
+        db,
+        transaction.portfolio_id,
+    )
+    db.refresh(transaction)
 
     update_data = transaction_data.model_dump(exclude_unset=True)
 

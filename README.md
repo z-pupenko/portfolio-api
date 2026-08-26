@@ -22,6 +22,8 @@ operations are scoped to the authenticated owner.
 - Create, retrieve, update, delete, and list transactions
 - Reject purchases with insufficient cash
 - Reject sales that exceed the quantity currently held
+- Serialize transaction writes per portfolio with PostgreSQL row-level locks
+- Reject transaction deletions that would leave negative cash or holdings
 - Calculate portfolio cash balance and holdings
 - Calculate portfolio value from the latest asset prices
 - Summarize transaction activity by asset and currency over an optional date range
@@ -230,7 +232,9 @@ The current suite contains unit, integration, and API tests covering business
 calculations, Pydantic schemas, configuration, persistence, and CSV imports.
 CI also starts a disposable PostgreSQL service, applies the complete Alembic
 migration history, checks for model/schema drift, and verifies database
-constraints independently of Pydantic.
+constraints independently of Pydantic. PostgreSQL integration coverage also
+forces concurrent sell attempts to overlap and verifies that portfolio row
+locking prevents both requests from spending the same holdings.
 
 ## Current limitations
 

@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Portfolio, Transaction
@@ -12,6 +13,38 @@ from app.services.portfolios import (
 
 class TransactionRuleError(ValueError):
     """Raised when a transaction violates a portfolio rule."""
+
+
+def validate_transaction_deletion(
+    db: Session,
+    portfolio: Portfolio,
+    transaction: Transaction,
+) -> None:
+    if transaction.transaction_type == "buy":
+        available_quantity = calculate_asset_quantity(
+            db,
+            portfolio.id,
+            transaction.asset_id,
+            exclude_transaction_id=transaction.id,
+        )
+        if available_quantity < 0:
+            raise TransactionRuleError(
+                "Insufficient asset quantity. Operation would result in negative quantity."
+            )
+    elif transaction.transaction_type == "sell":
+        available_cash = calculate_cash_balance(
+            db,
+            portfolio,
+            exclude_transaction_id=transaction.id,
+        )
+        if available_cash < 0:
+            raise TransactionRuleError(
+                "Insufficient cash. Operation would result in negative cash balance."
+            )
+    else:
+        raise RuntimeError(
+            f"Unsupported transaction type: {transaction.transaction_type}"
+        )
 
 
 def validate_sufficient_cash(
@@ -56,11 +89,27 @@ def validate_sufficient_quantity(
         )
 
 
+def lock_portfolio_for_transaction_write(
+    db: Session,
+    portfolio_id: int,
+) -> None:
+    statement = (
+        select(Portfolio.id).where(Portfolio.id == portfolio_id).with_for_update()
+    )
+
+    db.execute(statement).scalar_one()
+
+
 def add_transaction(
     db: Session,
     portfolio: Portfolio,
     transaction_data: TransactionCreate,
 ) -> Transaction:
+    lock_portfolio_for_transaction_write(
+        db,
+        portfolio.id,
+    )
+
     if transaction_data.transaction_type == "sell":
         validate_sufficient_quantity(
             db,
