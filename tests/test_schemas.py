@@ -4,7 +4,40 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from app.schemas import TransactionAnalyticsFilters, TransactionUpdate
+from app.schemas import (
+    PortfolioUpdate,
+    TransactionAnalyticsFilters,
+    TransactionUpdate,
+)
+
+
+@pytest.mark.parametrize(
+    "field_name",
+    [
+        "name",
+        "starting_cash",
+        "base_currency",
+    ],
+)
+def test_portfolio_update_rejects_explicit_null(field_name):
+    with pytest.raises(ValidationError):
+        PortfolioUpdate(**{field_name: None})
+
+
+def test_portfolio_update_allows_omitted_fields():
+    update = PortfolioUpdate(name="Retirement")
+
+    assert update.model_dump(exclude_unset=True) == {
+        "name": "Retirement",
+    }
+
+
+def test_portfolio_update_allows_clearing_description():
+    update = PortfolioUpdate(description=None)
+
+    assert update.model_dump(exclude_unset=True) == {
+        "description": None,
+    }
 
 
 @pytest.mark.parametrize(

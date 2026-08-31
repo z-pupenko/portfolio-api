@@ -41,3 +41,43 @@ def test_create_portfolio_through_api(
 
     assert saved_portfolio["id"] == portfolio_id
     assert saved_portfolio["name"] == payload["name"]
+
+
+def test_patch_portfolio_rejects_null_starting_cash(
+    client: TestClient,
+    auth_headers: dict[str, str],
+):
+    portfolio = {
+        "name": "Growth",
+        "description": "Long-term investments",
+        "starting_cash": "1000",
+        "base_currency": "gbp",
+    }
+
+    post_response = client.post(
+        "/portfolios/",
+        json=portfolio,
+        headers=auth_headers,
+    )
+
+    assert post_response.status_code == 201
+    portfolio_id = post_response.json()["id"]
+    portfolio_url = f"/portfolios/{portfolio_id}"
+
+    patch_response = client.patch(
+        portfolio_url,
+        json={"starting_cash": None},
+        headers=auth_headers,
+    )
+
+    assert patch_response.status_code == 422
+
+    get_response = client.get(
+        portfolio_url,
+        headers=auth_headers,
+    )
+    assert get_response.status_code == 200
+
+    saved_portfolio = get_response.json()
+
+    assert Decimal(saved_portfolio["starting_cash"]) == Decimal("1000")

@@ -128,13 +128,6 @@ def update_portfolio(
 
     if "base_currency" in update_data:
         base_currency = update_data["base_currency"]
-
-        if base_currency is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Base currency cannot be null",
-            )
-
         update_data["base_currency"] = base_currency.upper()
 
     for field, value in update_data.items():

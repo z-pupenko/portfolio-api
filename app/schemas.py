@@ -81,6 +81,19 @@ class PortfolioUpdate(BaseModel):
         max_length=3,
     )
 
+    @field_validator(
+        "name",
+        "starting_cash",
+        "base_currency",
+        mode="before",
+    )
+    @classmethod
+    def reject_null_values(cls, value):
+        if value is None:
+            raise ValueError("Field cannot be null")
+
+        return value
+
 
 # --------------------------------------------------
 # Asset schemas
