@@ -78,7 +78,36 @@ tests/                       # Unit, integration, and API tests
 
 ## Local setup
 
-### 1. Create and activate a virtual environment
+### Docker Compose (recommended)
+
+Install Docker Desktop, then copy the environment template:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Replace the example database password and JWT secret in `.env`, then build and
+start the API and PostgreSQL:
+
+```powershell
+docker compose up --build
+```
+
+The API waits for PostgreSQL to become healthy, applies Alembic migrations, and
+then starts Uvicorn. Open Swagger UI at <http://127.0.0.1:8000/docs>.
+
+Stop the containers with:
+
+```powershell
+docker compose down
+```
+
+PostgreSQL data remains in a named Docker volume between container restarts.
+To deliberately remove that data as well, use `docker compose down --volumes`.
+
+### Manual setup
+
+#### 1. Create and activate a virtual environment
 
 PowerShell:
 
@@ -87,13 +116,13 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 2. Install development dependencies
+#### 2. Install development dependencies
 
 ```powershell
 python -m pip install -r requirements-dev.txt
 ```
 
-### 3. Configure PostgreSQL
+#### 3. Configure PostgreSQL
 
 Copy the environment template:
 
@@ -122,13 +151,13 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 The application validates these settings during startup. The real `.env` file
 is excluded from Git.
 
-### 4. Apply database migrations
+#### 4. Apply database migrations
 
 ```powershell
 python -m alembic upgrade head
 ```
 
-### 5. Start the API
+#### 5. Start the API
 
 ```powershell
 python -m uvicorn app.main:app --reload
