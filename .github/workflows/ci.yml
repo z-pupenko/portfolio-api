@@ -110,3 +110,32 @@ jobs:
 
       - name: Test PostgreSQL constraints
         run: python -m pytest tests/test_postgres_integration.py
+
+  container:
+    name: Docker Compose smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      DB_USER: ci_user
+      DB_PASSWORD: ci_password
+      DB_NAME: ci_database
+      JWT_SECRET_KEY: ci-only-secret-not-used-outside-tests
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Build and start containers
+        run: docker compose up --build --detach --wait --wait-timeout 120
+
+      - name: Test API response
+        run: curl --fail --silent --show-error http://127.0.0.1:8000/
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Remove containers and test data
+        if: always()
+        run: docker compose down --volumes
