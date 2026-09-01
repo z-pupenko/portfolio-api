@@ -168,6 +168,14 @@ Open the interactive API documentation at:
 - Swagger UI: <http://127.0.0.1:8000/docs>
 - ReDoc: <http://127.0.0.1:8000/redoc>
 
+### Health checks
+
+- `GET /health/live` — confirms that the FastAPI process is running and responding.
+- `GET /health/ready` — confirms that the API can connect to and query PostgreSQL. It returns `503 Service Unavailable` when the database cannot be reached.
+
+Both endpoints are public so Docker and monitoring systems can call them without
+an authentication token.
+
 ## Authentication
 
 Register a user with `POST /auth/register`, then request an access token from

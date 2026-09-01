@@ -40,7 +40,7 @@ services:
         - -c
         - >-
           import urllib.request;
-          urllib.request.urlopen("http://localhost:8000/", timeout=2)
+          urllib.request.urlopen("http://localhost:8000/health/ready", timeout=2)
       interval: 10s
       timeout: 3s
       retries: 5
