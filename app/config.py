@@ -15,6 +15,13 @@ class Settings(BaseSettings):
         "production",
     ] = "development"
     debug: bool = False
+    log_level: Literal[
+        "DEBUG",
+        "INFO",
+        "WARNING",
+        "ERROR",
+        "CRITICAL",
+    ] = "INFO"
 
     db_user: str
     db_password: SecretStr

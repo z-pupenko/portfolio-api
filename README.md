@@ -35,6 +35,7 @@ operations are scoped to the authenticated owner.
 - Register users with Argon2 password hashing
 - Authenticate with OAuth2 bearer tokens and signed JWTs
 - Restrict portfolios, transactions, imports, and calculations to their owner
+- Emit structured JSON request logs with request IDs and response timings
 
 ## Technology
 
@@ -67,7 +68,9 @@ app/
 ├── config.py                # Environment-backed application settings
 ├── database.py              # SQLAlchemy engine and session dependency
 ├── dependencies.py          # Current-user authentication dependency
+├── logging_config.py        # Structured JSON logging configuration
 ├── main.py                  # FastAPI application and router registration
+├── middleware.py            # Request IDs, timings, and request logging
 ├── models.py                # SQLAlchemy database models
 ├── security.py              # Password hashing and JWT helpers
 └── schemas.py               # Pydantic request and response schemas
@@ -136,6 +139,7 @@ Update `.env` with credentials for an existing PostgreSQL database:
 APP_NAME=Portfolio API
 APP_ENVIRONMENT=development
 DEBUG=false
+LOG_LEVEL=INFO
 
 DB_USER=portfolio_user
 DB_PASSWORD=change-me
@@ -175,6 +179,20 @@ Open the interactive API documentation at:
 
 Both endpoints are public so Docker and monitoring systems can call them without
 an authentication token.
+
+### Request logging
+
+Successful and handled-error HTTP responses include an `X-Request-ID` header.
+The application writes a structured JSON log containing that request ID, the
+HTTP method, URL path, response status, and request duration. Successful
+responses use the `INFO` log level, client errors use `WARNING`, and server
+errors use `ERROR`.
+
+Set `LOG_LEVEL` to `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL` to control
+which application logs are emitted. Request bodies, query parameters,
+authorization headers, passwords, and access tokens are deliberately excluded.
+Container platforms can collect the JSON records from the application's standard
+output stream.
 
 ## Authentication
 

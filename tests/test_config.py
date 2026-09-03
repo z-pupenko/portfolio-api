@@ -41,3 +41,29 @@ def test_settings_rejects_non_positive_token_expiry():
             access_token_expire_minutes=0,
             _env_file=None,
         )
+
+
+def test_settings_uses_default_log_level():
+    settings = Settings(
+        db_user="test_user",
+        db_password="test_password",
+        db_host="localhost",
+        db_name="test_database",
+        jwt_secret_key="test-secret",
+        _env_file=None,
+    )
+
+    assert settings.log_level == "INFO"
+
+
+def test_settings_rejects_invalid_log_level():
+    with pytest.raises(ValidationError):
+        Settings(
+            db_user="test_user",
+            db_password="test_password",
+            db_host="localhost",
+            db_name="test_database",
+            jwt_secret_key="test-secret",
+            log_level="VERBOSE",
+            _env_file=None,
+        )

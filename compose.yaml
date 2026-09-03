@@ -23,6 +23,7 @@ services:
       APP_NAME: ${APP_NAME:-Portfolio API}
       APP_ENVIRONMENT: ${APP_ENVIRONMENT:-development}
       DEBUG: ${DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_HOST: db
