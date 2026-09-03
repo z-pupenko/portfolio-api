@@ -67,3 +67,68 @@ def test_settings_rejects_invalid_log_level():
             log_level="VERBOSE",
             _env_file=None,
         )
+
+
+def test_settings_rejects_debug_mode_in_production():
+    with pytest.raises(
+        ValidationError,
+        match="Debug mode must be disabled in production",
+    ):
+        Settings(
+            app_environment="production",
+            debug=True,
+            db_user="test_user",
+            db_password="test_password",
+            db_host="localhost",
+            db_name="test_database",
+            jwt_secret_key="x" * 32,
+            _env_file=None,
+        )
+
+
+def test_settings_rejects_short_jwt_secret_in_production():
+    with pytest.raises(
+        ValidationError,
+        match="JWT secret key must contain at least 32 characters in production",
+    ):
+        Settings(
+            app_environment="production",
+            debug=False,
+            db_user="test_user",
+            db_password="test_password",
+            db_host="localhost",
+            db_name="test_database",
+            jwt_secret_key="too-short",
+            _env_file=None,
+        )
+
+
+def test_settings_accepts_valid_production_configuration():
+    settings = Settings(
+        app_environment="production",
+        debug=False,
+        db_user="test_user",
+        db_password="test_password",
+        db_host="localhost",
+        db_name="test_database",
+        jwt_secret_key="x" * 32,
+        _env_file=None,
+    )
+
+    assert settings.app_environment == "production"
+    assert settings.debug is False
+
+
+def test_development_allows_debug_and_short_jwt_secret():
+    settings = Settings(
+        app_environment="development",
+        debug=True,
+        db_user="test_user",
+        db_password="test_password",
+        db_host="localhost",
+        db_name="test_database",
+        jwt_secret_key="test-secret",
+        _env_file=None,
+    )
+
+    assert settings.debug is True

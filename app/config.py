@@ -1,6 +1,6 @@
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import (
     BaseSettings,
     SettingsConfigDict,
@@ -32,6 +32,20 @@ class Settings(BaseSettings):
     jwt_secret_key: SecretStr
     jwt_algorithm: Literal["HS256"] = "HS256"
     access_token_expire_minutes: int = Field(default=30, gt=0)
+
+    @model_validator(mode="after")
+    def validate_production_settings(self) -> Self:
+        if self.app_environment == "production" and self.debug:
+            raise ValueError("Debug mode must be disabled in production")
+        if self.app_environment == "production":
+            jwt_secret = self.jwt_secret_key.get_secret_value()
+
+            if len(jwt_secret) < 32:
+                raise ValueError(
+                    "JWT secret key must contain at least 32 characters in production"
+                )
+
+        return self
 
     model_config = SettingsConfigDict(
         env_file=".env",

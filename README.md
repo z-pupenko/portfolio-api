@@ -194,6 +194,22 @@ authorization headers, passwords, and access tokens are deliberately excluded.
 Container platforms can collect the JSON records from the application's standard
 output stream.
 
+### Production configuration
+
+Set `APP_ENVIRONMENT=production` only in a production environment. Production
+startup rejects `DEBUG=true` and requires a JWT secret containing at least 32
+characters. These checks run while the settings object is created, before the
+FastAPI application begins accepting requests.
+
+Generate the real JWT secret outside the repository and provide it through the
+deployment environment or a secret manager. `SecretStr` prevents accidental
+display of the configured value, but it does not encrypt the value or make a
+weak secret secure.
+
+The container listens on `0.0.0.0:8000`; a future deployment platform must route
+traffic to that internal port. Database credentials and the JWT secret must be
+provided at runtime and must never be built into the Docker image.
+
 ## Authentication
 
 Register a user with `POST /auth/register`, then request an access token from
