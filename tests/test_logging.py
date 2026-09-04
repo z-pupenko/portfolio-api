@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.logging_config import JsonFormatter
-from app.middleware import _log_level_for_status
+from app.middleware import _log_level_for_response, _log_level_for_status
 
 
 def test_json_formatter_includes_request_fields():
@@ -40,7 +40,7 @@ def test_request_logging_adds_request_id_and_records_metadata(
     client: TestClient,
 ):
     with patch("app.middleware.request_logger") as request_logger:
-        response = client.get("/health/live")
+        response = client.get("/")
 
     request_logger.log.assert_called_once()
     level, message = request_logger.log.call_args.args
@@ -51,7 +51,7 @@ def test_request_logging_adds_request_id_and_records_metadata(
     assert level == logging.INFO
     assert message == "HTTP request completed"
     assert fields["method"] == "GET"
-    assert fields["path"] == "/health/live"
+    assert fields["path"] == "/"
     assert fields["status_code"] == 200
     assert fields["duration_ms"] >= 0
     assert set(fields) == {
@@ -75,6 +75,20 @@ def test_request_logging_records_client_errors(client: TestClient):
     assert level == logging.WARNING
     assert message == "HTTP request completed"
     assert fields["status_code"] == 404
+
+
+def test_successful_health_checks_use_debug_level(client: TestClient):
+    with patch("app.middleware.request_logger") as request_logger:
+        response = client.get("/health/live")
+
+    level, _message = request_logger.log.call_args.args
+
+    assert response.status_code == 200
+    assert level == logging.DEBUG
+
+
+def test_failed_health_checks_keep_error_level():
+    assert _log_level_for_response("/health/ready", 503) == logging.ERROR
 
 
 @pytest.mark.parametrize(

@@ -6,6 +6,12 @@ from uuid import uuid4
 from fastapi import Request, Response
 
 request_logger = logging.getLogger("portfolio_api.requests")
+HEALTH_CHECK_PATHS = frozenset(
+    {
+        "/health/live",
+        "/health/ready",
+    }
+)
 
 
 async def request_logging_middleware(
@@ -33,7 +39,10 @@ async def request_logging_middleware(
 
     response.headers["X-Request-ID"] = request_id
     request_logger.log(
-        _log_level_for_status(response.status_code),
+        _log_level_for_response(
+            request.url.path,
+            response.status_code,
+        ),
         "HTTP request completed",
         extra={
             "request_id": request_id,
@@ -56,3 +65,9 @@ def _log_level_for_status(status_code: int) -> int:
     if status_code >= 400:
         return logging.WARNING
     return logging.INFO
+
+
+def _log_level_for_response(path: str, status_code: int) -> int:
+    if path in HEALTH_CHECK_PATHS and status_code < 400:
+        return logging.DEBUG
+    return _log_level_for_status(status_code)

@@ -108,8 +108,11 @@ jobs:
       - name: Check models and migrations agree
         run: python -m alembic check
 
-      - name: Test PostgreSQL constraints
-        run: python -m pytest tests/test_postgres_integration.py
+      - name: Test PostgreSQL constraints and concurrency
+        run: >-
+          python -m pytest
+          tests/test_postgres_integration.py
+          tests/test_transaction_concurrency_postgres.py
 
   container:
     name: Docker Compose smoke test

@@ -35,7 +35,9 @@ operations are scoped to the authenticated owner.
 - Register users with Argon2 password hashing
 - Authenticate with OAuth2 bearer tokens and signed JWTs
 - Restrict portfolios, transactions, imports, and calculations to their owner
+- Expose separate liveness and database-readiness health checks
 - Emit structured JSON request logs with request IDs and response timings
+- Reject unsafe production settings without exposing secret input values
 
 ## Technology
 
@@ -56,6 +58,7 @@ app/
 ├── routers/                 # HTTP endpoints and HTTP error translation
 │   ├── assets.py
 │   ├── auth.py
+│   ├── health.py
 │   ├── portfolios.py
 │   ├── transactions.py
 │   └── lookups.py
@@ -161,10 +164,14 @@ is excluded from Git.
 python -m alembic upgrade head
 ```
 
+Run migrations against a live PostgreSQL database. The migration history
+contains a data-dependent ownership backfill, so offline `--sql` generation is
+intentionally unsupported.
+
 #### 5. Start the API
 
 ```powershell
-python -m uvicorn app.main:app --reload
+python -m uvicorn app.main:app --reload --no-access-log
 ```
 
 Open the interactive API documentation at:
@@ -188,6 +195,11 @@ HTTP method, URL path, response status, and request duration. Successful
 responses use the `INFO` log level, client errors use `WARNING`, and server
 errors use `ERROR`.
 
+Successful health probes use `DEBUG` to avoid filling normal logs with routine
+container checks. Failed health probes keep their normal warning or error level.
+Uvicorn's duplicate access log is disabled in the documented and containerized
+startup commands because the middleware already records requests.
+
 Set `LOG_LEVEL` to `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL` to control
 which application logs are emitted. Request bodies, query parameters,
 authorization headers, passwords, and access tokens are deliberately excluded.
@@ -199,7 +211,8 @@ output stream.
 Set `APP_ENVIRONMENT=production` only in a production environment. Production
 startup rejects `DEBUG=true` and requires a JWT secret containing at least 32
 characters. These checks run while the settings object is created, before the
-FastAPI application begins accepting requests.
+FastAPI application begins accepting requests. Validation errors hide raw input
+values so startup logs do not reveal database or JWT secrets.
 
 Generate the real JWT secret outside the repository and provide it through the
 deployment environment or a secret manager. `SecretStr` prevents accidental

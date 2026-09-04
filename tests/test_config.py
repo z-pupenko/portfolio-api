@@ -132,3 +132,24 @@ def test_development_allows_debug_and_short_jwt_secret():
     )
 
     assert settings.debug is True
+
+
+def test_settings_validation_errors_hide_secret_inputs():
+    database_password = "sensitive-database-password"
+    jwt_secret = "sensitive-production-jwt-secret-key"
+
+    with pytest.raises(ValidationError) as error:
+        Settings(
+            app_environment="production",
+            debug=True,
+            db_user="test_user",
+            db_password=database_password,
+            db_host="localhost",
+            db_name="test_database",
+            jwt_secret_key=jwt_secret,
+            _env_file=None,
+        )
+
+    error_message = str(error.value)
+    assert database_password not in error_message
+    assert jwt_secret not in error_message
